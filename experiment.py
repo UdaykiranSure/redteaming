@@ -3,8 +3,9 @@ from attack import generate_attack_prompts, adaptive_attack_loop
 from system_prompts import SYSTEM_PROMPTS       
 from target import TargetModel
 import json
-
-attacker = MistralAttacker(api_key="zZgtn5sGizW1ilh2VckjFYykE0DenE3v")
+from dotenv import loadenv
+loadenv()
+attacker = MistralAttacker(api_key=os.getenv("API_KEY"))
 target = TargetModel(base_url="http://localhost:8000/v1/chat/completions")
 
 for attack_type in ("direct", "role_play", "cot_hijacking"):
