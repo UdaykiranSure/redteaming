@@ -1,17 +1,17 @@
-import google.generativeai as genai
+# import google.generativeai as genai
 from mistralai import Mistral
 
-class GeminiAttacker:
-    def __init__(self, api_key, model_name="gemini-2.5-flash", system_prompt=None):
-        genai.configure(api_key=api_key)
-        self.model = genai.GenerativeModel(
-            model_name,
-            system_instruction=system_prompt
-        )
+# class GeminiAttacker:
+#     def __init__(self, api_key, model_name="gemini-2.5-flash", system_prompt=None):
+#         genai.configure(api_key=api_key)
+#         self.model = genai.GenerativeModel(
+#             model_name,
+#             system_instruction=system_prompt
+#         )
 
-    def generate(self, system_prompt, user_prompt):
-        response = self.model.generate_content(user_prompt)
-        return response.text
+#     def generate(self, system_prompt, user_prompt):
+#         response = self.model.generate_content(user_prompt)
+#         return response.text
 
 
 class MistralAttacker:
