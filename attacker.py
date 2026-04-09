@@ -37,3 +37,71 @@ class MistralAttacker:
             messages=messages
         )
         return response.choices[0].message.content
+
+
+import requests
+import time
+
+
+class AttackerModel:
+    def __init__(
+        self,
+        base_url="http://localhost:4141/v1/chat/completions",
+        model_name="gpt-4o-2024-11-20",
+        timeout=120,
+        max_retries=3,
+    ):
+        self.base_url = base_url
+        self.model_name = model_name
+        self.timeout = timeout
+        self.max_retries = max_retries
+        self.messages = []
+
+    def generate(self, system_prompt, user_prompt):
+
+        payload = {
+            "model": self.model_name,
+            "messages": [{"role":"system", "content":system_prompt},
+                         {"role":"user", "content":user_prompt}],
+            "temperature": 0.7,
+            "max_tokens": 512,  
+        }
+
+        for attempt in range(self.max_retries):
+            try:
+                response = requests.post(
+                    self.base_url, json=payload, timeout=self.timeout
+                )
+                response.raise_for_status()
+
+                data = response.json()
+
+                # ✅ Correct parsing for completions API
+                return data["choices"][0]['message']['content']
+
+            except requests.exceptions.HTTPError as e:
+                if 400 <= e.response.status_code < 500 and e.response.status_code != 429:
+                    print(f"Client error (HTTP {e.response.status_code}): {e.response.text}")
+                    raise
+
+                if attempt < self.max_retries - 1:
+                    wait_time = 5 * (2 ** attempt)
+                    print(f"HTTP {e.response.status_code} → retrying in {wait_time}s...")
+                    time.sleep(wait_time)
+                else:
+                    raise
+
+            except requests.exceptions.Timeout:
+                if attempt < self.max_retries - 1:
+                    wait_time = 5 * (2 ** attempt)
+                    print(f"Timeout → retrying in {wait_time}s...")
+                    time.sleep(wait_time)
+                else:
+                    raise
+
+            except requests.exceptions.RequestException as e:
+                if attempt < self.max_retries - 1:
+                    print(f"Request error: {e} → retrying...")
+                    time.sleep(2 ** attempt)
+                else:
+                    raise

@@ -5,8 +5,8 @@ import time
 class TargetModel:
     def __init__(
         self,
-        base_url="http://localhost:8000/v1/completions",
-        model_name="epfl-llm/meditron-7b",
+        base_url="http://localhost:8000/v1/chat/completions",
+        model_name="BioMistral/BioMistral-7B",
         timeout=120,
         max_retries=3,
     ):
@@ -15,13 +15,47 @@ class TargetModel:
         self.timeout = timeout
         self.max_retries = max_retries
 
-    def generate(self, prompt):
-        payload = {
+    def _is_chat_endpoint(self):
+        return self.base_url.rstrip("/").endswith("/chat/completions")
+
+    def _build_payload(self, prompt):
+        common = {
             "model": self.model_name,
-            "prompt": prompt,
             "temperature": 0.7,
-            "max_tokens": 512,  
+            "max_tokens": 512,
         }
+
+        if self._is_chat_endpoint():
+            return {
+                **common,
+                "messages": [{"role": "user", "content": prompt}],
+            }
+
+        return {
+            **common,
+            "prompt": prompt,
+        }
+
+    def _parse_response_text(self, data):
+        choices = data.get("choices") or []
+        if not choices:
+            raise ValueError(f"Invalid completion response: missing choices. Raw: {data}")
+
+        first = choices[0]
+
+        # Chat-completions format
+        message = first.get("message")
+        if isinstance(message, dict) and "content" in message:
+            return message["content"]
+
+        # Legacy completions format
+        if "text" in first:
+            return first["text"]
+
+        raise ValueError(f"Unsupported completion response format. Raw: {data}")
+
+    def generate(self, prompt):
+        payload = self._build_payload(prompt)
 
         for attempt in range(self.max_retries):
             try:
@@ -32,8 +66,7 @@ class TargetModel:
 
                 data = response.json()
 
-                # ✅ Correct parsing for completions API
-                return data["choices"][0]["text"]
+                return self._parse_response_text(data)
 
             except requests.exceptions.HTTPError as e:
                 if 400 <= e.response.status_code < 500 and e.response.status_code != 429:

@@ -28,7 +28,7 @@ import json
 import argparse
 from dotenv import load_dotenv
 
-from attacker import MistralAttacker          # swap to GeminiAttacker if preferred
+from attacker import AttackerModel          # swap to GeminiAttacker if preferred
 from attack import generate_attack_prompts, adaptive_attack_loop
 from system_prompts import SYSTEM_PROMPTS
 from target import TargetModel
@@ -79,8 +79,8 @@ def main():
     os.makedirs(args.output_dir, exist_ok=True)
 
     # --- Initialise models ---------------------------------------------------
-    attacker = MistralAttacker(api_key="LWpul7wKFxtO44TyD23TFAlFaTQwGpq3")
-    target   = TargetModel(base_url="http://localhost:8000/v1/completions")
+    attacker = AttackerModel()
+    target   = TargetModel(base_url="http://localhost:8000/v1/chat/completions")
 
     summary = {}   # attack_type → {total, success, failed}
 
@@ -103,9 +103,9 @@ def main():
         # 2. Run the adaptive loop for each seed prompt
         for idx, prompt in enumerate(seed_prompts, 1):
             # pace ourselves: pause briefly every 10 requests to avoid rate limits
-            if idx % 10 == 0:
+            if idx % 5 == 0:
                 import time
-                time.sleep(60)
+                time.sleep(30)
 
             print(f"\n  [{idx}/{len(seed_prompts)}] {prompt[:80]}{'…' if len(prompt) > 80 else ''}")
 
@@ -124,7 +124,7 @@ def main():
             results.append(result)
 
         # 3. Save results for this attack type
-        out_path = os.path.join(args.output_dir, f"{attack_type}_results_openbiollm.json")
+        out_path = os.path.join(args.output_dir, f"{attack_type}_results_biomistral-gpt4o.json")
         with open(out_path, "w") as f:
             json.dump(results, f, indent=4)
         print(f"\n  Results saved → {out_path}")

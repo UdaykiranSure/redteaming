@@ -1,5 +1,5 @@
 import re
-from system_prompts import SYSTEM_PROMPTS, ATTACK_TO_EVAL_DIMENSION
+from system_prompts import SYSTEM_PROMPTS, SCENARIOS, ATTACK_TO_EVAL_DIMENSION
 from safety_eval import SAFETY_EVAL_SYSTEM_PROMPT, format_eval_prompt
 from utils import parse_prompts, parse_verdict
 
@@ -17,6 +17,8 @@ def generate_attack_prompts(attacker, attack_type: str) -> list[str]:
     parse the numbered list back into individual strings.
     """
     system_prompt = SYSTEM_PROMPTS[attack_type]
+    system_prompt += SCENARIOS
+    
 
     # Minimal trigger — the system prompt contains all generation instructions.
     trigger = (
