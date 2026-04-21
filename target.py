@@ -6,7 +6,7 @@ class TargetModel:
     def __init__(
         self,
         base_url="http://localhost:8000/v1/chat/completions",
-        model_name="BioMistral/BioMistral-7B",
+        model_name="biomistral/biomistral-7b",
         timeout=120,
         max_retries=3,
     ):

@@ -47,7 +47,7 @@ class AttackerModel:
     def __init__(
         self,
         base_url="http://localhost:4141/v1/chat/completions",
-        model_name="gpt-4o-2024-11-20",
+        model_name="gpt-5-mini",
         timeout=120,
         max_retries=3,
     ):

@@ -67,6 +67,43 @@ def parse_args():
         default="results",
         help="Directory to write JSON result files (default: ./results)",
     )
+    parser.add_argument(
+        "--attacker-base-url",
+        type=str,
+        default="http://localhost:4141/v1/chat/completions",
+        help="OpenAI-compatible endpoint for the attacker model",
+    )
+    parser.add_argument(
+        "--attacker-model",
+        type=str,
+        default="gpt-5-mini",
+        help="Attacker model name",
+    )
+    parser.add_argument(
+        "--judge-base-url",
+        type=str,
+        default="http://localhost:4141/v1/chat/completions",
+        help="OpenAI-compatible endpoint for judge models",
+    )
+    parser.add_argument(
+        "--judge-models",
+        nargs=3,
+        metavar=("JUDGE1", "JUDGE2", "JUDGE3"),
+        default=["gemini-3-flash-preview", "gpt-4o-mini", "gpt-5-mini"],
+        help="Exactly three judge model names for majority voting",
+    )
+    parser.add_argument(
+        "--target-base-url",
+        type=str,
+        default="http://localhost:8000/v1/chat/completions",
+        help="OpenAI-compatible endpoint for the target model",
+    )
+    parser.add_argument(
+        "--target-model",
+        type=str,
+        default="biomistral/biomistral-7b",
+        help="Target model name",
+    )
     return parser.parse_args()
 
 
@@ -79,8 +116,22 @@ def main():
     os.makedirs(args.output_dir, exist_ok=True)
 
     # --- Initialise models ---------------------------------------------------
-    attacker = AttackerModel()
-    target   = TargetModel(base_url="http://localhost:8000/v1/chat/completions")
+    attacker = AttackerModel(
+        base_url=args.attacker_base_url,
+        model_name=args.attacker_model,
+    )
+    judges = [
+        AttackerModel(base_url=args.judge_base_url, model_name=model_name)
+        for model_name in args.judge_models
+    ]
+    target = TargetModel(
+        base_url=args.target_base_url,
+        model_name=args.target_model,
+    )
+
+    print("\nJudge ensemble:")
+    for idx, judge_name in enumerate(args.judge_models, 1):
+        print(f"  Judge {idx}: {judge_name}")
 
     summary = {}   # attack_type → {total, success, failed}
 
@@ -103,15 +154,16 @@ def main():
         # 2. Run the adaptive loop for each seed prompt
         for idx, prompt in enumerate(seed_prompts, 1):
             # pace ourselves: pause briefly every 10 requests to avoid rate limits
-            if idx % 5 == 0:
-                import time
-                time.sleep(30)
+            # if idx % 5 == 0:
+            #     import time
+            #     time.sleep(30)
 
             print(f"\n  [{idx}/{len(seed_prompts)}] {prompt[:80]}{'…' if len(prompt) > 80 else ''}")
 
             result = adaptive_attack_loop(
                 attacker=attacker,
                 target=target,
+                judges=judges,
                 attack_type=attack_type,
                 initial_prompt=prompt,
                 max_iters=args.max_iters,
@@ -124,7 +176,7 @@ def main():
             results.append(result)
 
         # 3. Save results for this attack type
-        out_path = os.path.join(args.output_dir, f"{attack_type}_results_biomistral-gpt4o.json")
+        out_path = os.path.join(args.output_dir, f"{attack_type}_results_biomistral-gpt3.5.json")
         with open(out_path, "w") as f:
             json.dump(results, f, indent=4)
         print(f"\n  Results saved → {out_path}")
